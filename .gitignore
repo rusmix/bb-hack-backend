@@ -1,0 +1,7 @@
+./updated_games_details.json
+./src/gameParser/parsedData/games.json
+./node_modules
+.env
+.DS_Store
+./src/DS_Store
+./package_lock.json
