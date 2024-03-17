@@ -1,6 +1,7 @@
 const fs = require("fs");
 const { Pool } = require("pg");
 const queries = require("./queries.js");
+const { pgConfig } = require("../constants.js");
 
 const {
   insertGame: insertGameQuery,
@@ -11,13 +12,7 @@ const {
   insertProvider,
 } = queries;
 
-const pool = new Pool({
-  user: "postgres",
-  host: "localhost",
-  database: "xaxaton_master",
-  password: "1",
-  port: 5434,
-});
+const pool = new Pool(pgConfig);
 
 const convertBoolean = {
   Да: true,
