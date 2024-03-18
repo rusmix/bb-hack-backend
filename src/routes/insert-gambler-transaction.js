@@ -7,7 +7,6 @@ const { insertGamblerTransaction: insertGamblerTransactionQuery } = queries;
 const transactionSchema = Joi.object({
   gambler_id: Joi.number().integer().positive().required(),
   partner_id: Joi.number().integer().positive().required(),
-  game_id: Joi.number().integer().positive().required(),
   external_game_id: Joi.number().integer().positive().required(),
   type: Joi.string().valid("bet_in", "bet_out").required(),
   usd_amount: Joi.number().positive().required(),
@@ -33,7 +32,6 @@ const insertGamblerTransaction = async (req, res) => {
   const {
     gambler_id,
     partner_id,
-    game_id,
     external_game_id,
     type,
     usd_amount,
@@ -44,7 +42,6 @@ const insertGamblerTransaction = async (req, res) => {
     const { rows } = await db.query(insertGamblerTransactionQuery, [
       gambler_id,
       partner_id,
-      game_id,
       external_game_id,
       type,
       usd_amount,

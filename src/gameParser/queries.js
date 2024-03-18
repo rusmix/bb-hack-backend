@@ -1,9 +1,9 @@
 module.exports = {
   insertGame: `
   INSERT INTO main.games
-    (label, rtp_percentage, volatility, max_win_multiplier, min_bet, max_bet, coins_per_line, number_of_reels, number_of_lines, scatter, bonus_game, bonus_game_purchase, free_spins, wild_symbol, wild_multiplier, gamble_feature, auto_play)
+    (label, rtp_percentage, volatility, max_win_multiplier, min_bet, max_bet, coins_per_line, number_of_reels, number_of_lines, scatter, bonus_game, bonus_game_purchase, free_spins, wild_symbol, wild_multiplier, gamble_feature, auto_play, provider_id)
   VALUES
-    ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+    ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
   RETURNING game_id;`,
 
   insertTags: `INSERT INTO main.tags (label)
@@ -16,7 +16,7 @@ module.exports = {
   ON CONFLICT (label) DO UPDATE SET label=EXCLUDED.label
   RETURNING theme_id;`,
 
-  insertProviders: `
+  insertProvider: `
   INSERT INTO main.providers (label)
   VALUES ($1)
   ON CONFLICT (label) DO UPDATE SET label=EXCLUDED.label

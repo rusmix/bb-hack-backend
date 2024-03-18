@@ -1,7 +1,6 @@
 const fs = require("fs");
-const { Pool } = require("pg");
 const queries = require("./queries.js");
-const { pgConfig } = require("../constants.js");
+const db = require("../db.js");
 
 const {
   insertGame: insertGameQuery,
@@ -11,8 +10,6 @@ const {
   insertThemes,
   insertProvider,
 } = queries;
-
-const pool = new Pool(pgConfig);
 
 const convertBoolean = {
   Да: true,
@@ -47,7 +44,7 @@ const parseNumbers = (value, type) => {
   return "";
 };
 
-const insertGame = async (client, gameData) => {
+const insertGame = async (client, gameData, providerId) => {
   const rtpPercentage = parseNumbers(
     gameData.details["Отдача (%):"].replace(" %", ""),
     "float"
@@ -92,22 +89,23 @@ const insertGame = async (client, gameData) => {
 
   const values = [
     gameData.name,
-    rtpPercentage || "",
-    volatility || "",
-    maxWinMultiplier || "",
-    minBet || "",
-    maxBet || "",
-    coinsPerLine || "",
-    numberOfReels || "",
-    numberOfLines || "",
-    scatter || "",
-    bonusGame || "",
-    bonusGamePurchase || "",
-    freeSpins || "",
-    wildSymbol || "",
-    wildMultiplier || "",
-    gambleFeature || "",
-    autoPlay || "",
+    rtpPercentage || null,
+    volatility || null,
+    maxWinMultiplier || null,
+    minBet || null,
+    maxBet || null,
+    coinsPerLine || null,
+    numberOfReels || null,
+    numberOfLines || null,
+    scatter || null,
+    bonusGame || null,
+    bonusGamePurchase || null,
+    freeSpins || null,
+    wildSymbol || null,
+    wildMultiplier || null,
+    gambleFeature || null,
+    autoPlay || null,
+    providerId,
   ];
 
   console.log(values);
@@ -121,17 +119,22 @@ const insertGame = async (client, gameData) => {
 };
 
 const main = async () => {
-  const client = await pool.connect();
+  const client = await db.connect();
   try {
-    const gamesData = await readGamesFromFile("./parsedData/games.json");
-    for (const url in gamesData) {
-      const game = gamesData[url];
-      const gameId = await insertGame(client, game);
-      if (!gameId) continue;
+    const gamesData = await readGamesFromFile(
+      "./src/gameParser/parsedData/games.json"
+    );
+    for (let i = 0; i < gamesData.length; i++) {
+      const game = gamesData[i];
 
-      await client.query(insertProvider, [
+      const providerResult = await client.query(insertProvider, [
         game.details["Производитель автомата:"],
       ]);
+
+      const providerId = providerResult.rows[0].provider_id;
+
+      const gameId = await insertGame(client, game, providerId);
+      if (!gameId) continue;
 
       const tagLabels = game.features["Тема игрового автомата:"];
       const tagIdsResult = await client.query(insertTags, [tagLabels]);
@@ -139,8 +142,7 @@ const main = async () => {
 
       await client.query(insertTagsGames, [gameId, tagIds]);
 
-      const themeLabels =
-        game.features["Специальные функции (бонуски):"].split(", ");
+      const themeLabels = game.features["Специальные функции (бонуски):"];
       const themeIdsResult = await client.query(insertThemes, [themeLabels]);
       const themeIds = themeIdsResult.rows.map((row) => row.theme_id);
 
