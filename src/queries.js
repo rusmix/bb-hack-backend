@@ -132,41 +132,48 @@ module.exports = {
     VALUES ($1, $2, $3, $4);`,
 
   getPopularGame: `
-    select  
-    gambler_id,
-  external_game_id AS "externalGameId"
-  , r1+r2 as summary
-from 
-(select 
-  external_game_id
-  , row_number() over(order by gamblers_cnt desc) as r1
-  , row_number() over(order by time desc) as r2
-from 
-(select 
-  external_game_id
-  , count(distinct gambler_id) as gamblers_cnt
-  , sum(time) as time
-from xaxaton_analytics.main.df_agg
-group by 
-  1
-) t
-left join 
-(select 
-  gambler_id
-  , external_game_id 
-  , max(end_datetime) as end_datetime
-from xaxaton_analytics.main.gamblers_clicks
-group by 
-  1, 2
-) t 
-  using(external_game_id)
-where 
-    gambler_id = $1
-    /*tagIds*/
-    /*themeIds*/
-    AND (end_datetime is null or current_timestamp - end_datetime >= '10 days')
-order by 
-  2;`,
+    WITH aggregated_data AS (
+        SELECT 
+            external_game_id,
+            COUNT(DISTINCT gambler_id) AS gamblers_cnt,
+            AVG(time) AS time
+        FROM 
+            xaxaton_analytics.main.df_agg
+        GROUP BY 
+            external_game_id
+    ), ranked_games AS (
+        SELECT 
+            external_game_id,
+            ROW_NUMBER() OVER(ORDER BY gamblers_cnt DESC) AS r1,
+            ROW_NUMBER() OVER(ORDER BY time DESC) AS r2
+        FROM 
+            aggregated_data
+    ), last_gambler_click AS (
+        SELECT 
+            gambler_id,
+            external_game_id,
+            MAX(end_datetime) AS end_datetime
+        FROM 
+            xaxaton_analytics.main.gamblers_clicks
+        GROUP BY 
+            gambler_id, external_game_id
+    )
+    SELECT 
+        rg.external_game_id,
+        rg.r1 + rg.r2 AS summary
+    FROM 
+        ranked_games rg
+    LEFT JOIN 
+        last_gambler_click lgc ON rg.external_game_id = lgc.external_game_id
+    LEFT JOIN 
+        xaxaton_analytics.main.games g ON rg.external_game_id = g.game_id
+    WHERE 
+        (lgc.end_datetime IS NULL OR CURRENT_TIMESTAMP - lgc.end_datetime >= INTERVAL '10 days')
+        /*tagIds*/
+        /*themeIds*/
+    ORDER BY 
+        summary
+    LIMIT 1;`,
 
   getCompletelyRandomGame: `
     SELECT
